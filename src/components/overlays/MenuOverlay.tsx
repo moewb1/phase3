@@ -131,8 +131,6 @@ export function MenuOverlay({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.menuBackground,
-    flex: 1,
-    height:'100%',
   },
   topRow: {
     alignItems: 'center',
