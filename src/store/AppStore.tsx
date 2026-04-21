@@ -17,8 +17,6 @@ import type {
 import { readJson, readString, writeJson, writeString } from '../services/storage/sessionStorage';
 import { storageKeys } from '../services/storage/storageKeys';
 
-const legacyPlaylistIds = new Set(['draft-taylor', 'draft-focus']);
-
 const defaultChannels: ChannelAccount[] = [
   {
     id: 'moewb',
@@ -95,9 +93,6 @@ function sanitizeStoredPlaylists(
   }
 
   return playlists.reduce<PlaylistDraft[]>((nextPlaylists, playlist) => {
-    if (legacyPlaylistIds.has(playlist.id)) {
-      return nextPlaylists;
-    }
 
     const songs = playlist.songs.filter(song => !song.id.startsWith('local-song-'));
     const hadLegacySongs = songs.length !== playlist.songs.length;
