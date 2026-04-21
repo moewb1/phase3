@@ -1,4 +1,4 @@
-import type { ApiSong } from './api';
+export type AppNotificationAccent = 'pink' | 'purple';
 
 export interface SessionState {
   authToken: string;
@@ -19,7 +19,7 @@ export interface AppNotification {
   title: string;
   subtitle: string;
   category: 'all' | 'unread' | 'milestone';
-  accent: string;
+  accent: AppNotificationAccent;
 }
 
 export interface PlaylistDraftSong {
@@ -31,37 +31,11 @@ export interface PlaylistDraftSong {
 
 export interface PlaylistDraft {
   id: string;
+  ownerChannelId: string;
   name: string;
   description: string;
   isPrivate: boolean;
   updatedAt: string;
   artworkUrls: string[];
   songs: PlaylistDraftSong[];
-}
-
-export interface SearchMediaCard {
-  id: string;
-  title: string;
-  subtitle: string;
-  imageUrl: string;
-}
-
-export interface SearchResultsBundle {
-  artists: ApiSong[];
-  songs: ApiSong[];
-  playlists: {
-    id: number;
-    name: string;
-    description: string | null;
-    imageUrl: string | null;
-    songCount: number;
-    ownerName: string;
-  }[];
-  creators: {
-    id: number;
-    name: string;
-    imageUrl: string | null;
-  }[];
-  videos: SearchMediaCard[];
-  photos: SearchMediaCard[];
 }

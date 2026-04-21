@@ -1,8 +1,5 @@
 export type RootStackParamList = {
   Home: undefined;
-  SearchResults: {
-    initialQuery?: string;
-  };
   PlaylistDetails: {
     projectId: number;
     titleOverride?: string;
@@ -12,7 +9,8 @@ export type RootStackParamList = {
     playlistId: string;
   };
   Placeholder: {
-    title: string;
+    title?: string;
     message?: string;
+    requestedPath?: string;
   };
 };

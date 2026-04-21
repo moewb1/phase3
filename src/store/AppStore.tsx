@@ -6,6 +6,7 @@ import React, {
   type PropsWithChildren,
 } from 'react';
 import { APP_CONFIG } from '../config/appConfig';
+import { strings } from '../localization/strings';
 import type {
   AppNotification,
   ChannelAccount,
@@ -16,20 +17,22 @@ import type {
 import { readJson, readString, writeJson, writeString } from '../services/storage/sessionStorage';
 import { storageKeys } from '../services/storage/storageKeys';
 
+const legacyPlaylistIds = new Set(['draft-taylor', 'draft-focus']);
+
 const defaultChannels: ChannelAccount[] = [
   {
     id: 'moewb',
     teamId: 'team-moe',
-    title: 'Moe WB',
-    subtitle: '83.3K Subscribers • 2K Videos',
+    title: strings.store.channels.moeWb.title,
+    subtitle: strings.store.channels.moeWb.subtitle,
     avatarUrl:
       'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
   },
   {
     id: 'thematic-team',
     teamId: 'team-thematic',
-    title: 'Thematic Team',
-    subtitle: 'Support account • Product updates',
+    title: strings.store.channels.thematicTeam.title,
+    subtitle: strings.store.channels.thematicTeam.subtitle,
     avatarUrl:
       'https://images.unsplash.com/photo-1546961329-78bef0414d7c?auto=format&fit=crop&w=200&q=80',
   },
@@ -38,72 +41,17 @@ const defaultChannels: ChannelAccount[] = [
 const defaultNotifications: AppNotification[] = [
   {
     id: 'badge-1',
-    title: 'You achieved a new badge!',
-    subtitle: '8 minutes ago',
+    title: strings.store.notifications.achievedBadge,
+    subtitle: strings.store.notifications.eightMinutesAgo,
     category: 'milestone',
-    accent: '#E46DAD',
+    accent: 'pink',
   },
   {
     id: 'badge-2',
-    title: 'You achieved a new badge!',
-    subtitle: '18 minutes ago',
+    title: strings.store.notifications.achievedBadge,
+    subtitle: strings.store.notifications.eighteenMinutesAgo,
     category: 'unread',
-    accent: '#7E49D4',
-  },
-];
-
-const seedSongs: PlaylistDraftSong[] = [
-  {
-    id: 'local-song-1',
-    title: 'Stay',
-    artistName: 'Singto Conley',
-    artworkUrl:
-      'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'local-song-2',
-    title: 'Lonely Heroes',
-    artistName: 'Nico Anuch',
-    artworkUrl:
-      'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'local-song-3',
-    title: 'Silver Lining',
-    artistName: 'Taylor Belle',
-    artworkUrl:
-      'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=300&q=80',
-  },
-];
-
-const defaultPlaylists: PlaylistDraft[] = [
-  {
-    id: 'draft-taylor',
-    name: 'Taylor Swift',
-    description: 'A polished shortlist for cinematic, bright pop storytelling.',
-    isPrivate: true,
-    updatedAt: new Date().toISOString(),
-    artworkUrls: [
-      'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=400&q=80',
-      'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=400&q=80',
-      'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=400&q=80',
-      'https://images.unsplash.com/photo-1501612780327-45045538702b?auto=format&fit=crop&w=400&q=80',
-    ],
-    songs: seedSongs,
-  },
-  {
-    id: 'draft-focus',
-    name: 'Late Night Focus',
-    description: 'Warm textures, slow builds, and tracks for thoughtful scenes.',
-    isPrivate: false,
-    updatedAt: new Date().toISOString(),
-    artworkUrls: [
-      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80',
-      'https://images.unsplash.com/photo-1496293455970-f8581aae0e3b?auto=format&fit=crop&w=400&q=80',
-      'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=400&q=80',
-      'https://images.unsplash.com/photo-1504609813442-a8924e83f76e?auto=format&fit=crop&w=400&q=80',
-    ],
-    songs: seedSongs.slice(0, 2),
+    accent: 'purple',
   },
 ];
 
@@ -134,6 +82,41 @@ function resolveSelectedChannel(
   return channels.find(channel => channel.id === activeChannelId) ?? channels[0];
 }
 
+function buildArtworkUrls(songs: PlaylistDraftSong[]): string[] {
+  return [...new Set(songs.map(song => song.artworkUrl).filter(Boolean))].slice(0, 4);
+}
+
+function sanitizeStoredPlaylists(
+  playlists: PlaylistDraft[] | null,
+  fallbackOwnerChannelId: string,
+): PlaylistDraft[] {
+  if (!playlists?.length) {
+    return [];
+  }
+
+  return playlists.reduce<PlaylistDraft[]>((nextPlaylists, playlist) => {
+    if (legacyPlaylistIds.has(playlist.id)) {
+      return nextPlaylists;
+    }
+
+    const songs = playlist.songs.filter(song => !song.id.startsWith('local-song-'));
+    const hadLegacySongs = songs.length !== playlist.songs.length;
+
+    if (hadLegacySongs && songs.length === 0) {
+      return nextPlaylists;
+    }
+
+    nextPlaylists.push({
+      ...playlist,
+      ownerChannelId: playlist.ownerChannelId ?? fallbackOwnerChannelId,
+      songs,
+      artworkUrls: buildArtworkUrls(songs),
+    });
+
+    return nextPlaylists;
+  }, []);
+}
+
 export function AppStoreProvider({
   children,
 }: PropsWithChildren): React.JSX.Element {
@@ -145,9 +128,7 @@ export function AppStoreProvider({
     activeTeamId: defaultChannels[0].teamId,
     activeChannelId: defaultChannels[0].id,
   });
-  const [playlistDrafts, setPlaylistDrafts] = useState<PlaylistDraft[]>(
-    defaultPlaylists,
-  );
+  const [allPlaylistDrafts, setAllPlaylistDrafts] = useState<PlaylistDraft[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -165,16 +146,17 @@ export function AppStoreProvider({
         return;
       }
 
-      const nextChannel =
-        activeChannelId &&
-        defaultChannels.find(channel => channel.id === activeChannelId);
+      const nextChannel = activeChannelId
+        ? defaultChannels.find(channel => channel.id === activeChannelId)
+        : undefined;
+      const nextActiveChannelId = nextChannel?.id ?? defaultChannels[0].id;
 
       setSession({
         authToken: authToken ?? APP_CONFIG.authToken,
         activeTeamId: activeTeamId ?? nextChannel?.teamId ?? defaultChannels[0].teamId,
-        activeChannelId: nextChannel?.id ?? defaultChannels[0].id,
+        activeChannelId: nextActiveChannelId,
       });
-      setPlaylistDrafts(storedPlaylists?.length ? storedPlaylists : defaultPlaylists);
+      setAllPlaylistDrafts(sanitizeStoredPlaylists(storedPlaylists, nextActiveChannelId));
       setHydrated(true);
     }
 
@@ -190,11 +172,11 @@ export function AppStoreProvider({
       return;
     }
 
-    void Promise.all([
+    Promise.all([
       writeString(storageKeys.authToken, session.authToken),
       writeString(storageKeys.activeChannelId, session.activeChannelId),
       writeString(storageKeys.activeTeamId, session.activeTeamId ?? ''),
-    ]);
+    ]).catch(() => undefined);
   }, [hydrated, session]);
 
   useEffect(() => {
@@ -202,10 +184,13 @@ export function AppStoreProvider({
       return;
     }
 
-    void writeJson(storageKeys.playlistDrafts, playlistDrafts);
-  }, [hydrated, playlistDrafts]);
+    writeJson(storageKeys.playlistDrafts, allPlaylistDrafts).catch(() => undefined);
+  }, [allPlaylistDrafts, hydrated]);
 
   const selectedChannel = resolveSelectedChannel(session.activeChannelId, channels);
+  const playlistDrafts = allPlaylistDrafts.filter(
+    playlist => playlist.ownerChannelId === selectedChannel.id,
+  );
 
   function switchChannel(channelId: string) {
     const nextChannel = channels.find(channel => channel.id === channelId);
@@ -220,19 +205,20 @@ export function AppStoreProvider({
     }));
   }
 
-  function createPlaylist(name = 'Untitled Playlist'): string {
+  function createPlaylist(name: string = strings.common.playlist.newName): string {
     const nextPlaylistId = `playlist-${Date.now()}`;
     const newPlaylist: PlaylistDraft = {
       id: nextPlaylistId,
+      ownerChannelId: selectedChannel.id,
       name,
-      description: 'Add your playlist description here.',
+      description: strings.common.playlist.defaultDescription,
       isPrivate: true,
       updatedAt: new Date().toISOString(),
-      artworkUrls: defaultPlaylists[0].artworkUrls,
-      songs: seedSongs,
+      artworkUrls: [],
+      songs: [],
     };
 
-    setPlaylistDrafts(currentPlaylists => [newPlaylist, ...currentPlaylists]);
+    setAllPlaylistDrafts(currentPlaylists => [newPlaylist, ...currentPlaylists]);
     return nextPlaylistId;
   }
 
@@ -240,7 +226,7 @@ export function AppStoreProvider({
     playlistId: string,
     updates: Partial<Pick<PlaylistDraft, 'name' | 'description' | 'isPrivate'>>,
   ) {
-    setPlaylistDrafts(currentPlaylists =>
+    setAllPlaylistDrafts(currentPlaylists =>
       currentPlaylists.map(playlist =>
         playlist.id === playlistId
           ? {
@@ -254,25 +240,31 @@ export function AppStoreProvider({
   }
 
   function deleteSongsFromPlaylist(playlistId: string, songIds: string[]) {
-    setPlaylistDrafts(currentPlaylists =>
+    setAllPlaylistDrafts(currentPlaylists =>
       currentPlaylists.map(playlist =>
         playlist.id === playlistId
-          ? {
-              ...playlist,
-              songs: playlist.songs.filter(song => !songIds.includes(song.id)),
-              updatedAt: new Date().toISOString(),
-            }
+          ? (() => {
+              const songs = playlist.songs.filter(song => !songIds.includes(song.id));
+
+              return {
+                ...playlist,
+                artworkUrls: buildArtworkUrls(songs),
+                songs,
+                updatedAt: new Date().toISOString(),
+              };
+            })()
           : playlist,
       ),
     );
   }
 
   function reorderPlaylistSongs(playlistId: string, songs: PlaylistDraftSong[]) {
-    setPlaylistDrafts(currentPlaylists =>
+    setAllPlaylistDrafts(currentPlaylists =>
       currentPlaylists.map(playlist =>
         playlist.id === playlistId
           ? {
               ...playlist,
+              artworkUrls: buildArtworkUrls(songs),
               songs,
               updatedAt: new Date().toISOString(),
             }
@@ -282,16 +274,21 @@ export function AppStoreProvider({
   }
 
   function addSongToPlaylist(playlistId: string, song: PlaylistDraftSong) {
-    setPlaylistDrafts(currentPlaylists =>
+    setAllPlaylistDrafts(currentPlaylists =>
       currentPlaylists.map(playlist =>
         playlist.id === playlistId
-          ? {
-              ...playlist,
-              songs: playlist.songs.some(item => item.id === song.id)
+          ? (() => {
+              const songs = playlist.songs.some(item => item.id === song.id)
                 ? playlist.songs
-                : [song, ...playlist.songs],
-              updatedAt: new Date().toISOString(),
-            }
+                : [song, ...playlist.songs];
+
+              return {
+                ...playlist,
+                artworkUrls: buildArtworkUrls(songs),
+                songs,
+                updatedAt: new Date().toISOString(),
+              };
+            })()
           : playlist,
       ),
     );
@@ -322,7 +319,7 @@ export function useAppStore(): AppStoreValue {
   const context = useContext(AppStoreContext);
 
   if (!context) {
-    throw new Error('useAppStore must be used inside AppStoreProvider.');
+    throw new Error(strings.store.errors.missingProvider);
   }
 
   return context;

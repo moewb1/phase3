@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@d11/react-native-fast-image": "^8.13.0",
     "@gorhom/bottom-sheet": "^5.2.9",
     "@react-native-async-storage/async-storage": "^3.0.2",
     "@react-native/new-app-screen": "0.85.2",
@@ -25,7 +26,8 @@
     "react-native-reanimated": "^4.3.0",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.24.0",
-    "react-native-svg": "^15.15.4"
+    "react-native-svg": "^15.15.4",
+    "react-native-worklets": "^0.8.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
